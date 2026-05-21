@@ -13,17 +13,20 @@ export default function KanbanCard({
 }) {
   const { id_apresentacao, data_agendada, titulo_artigo, link_artigo, link_slides, status_atividade } = apresentacao;
 
-  // Formata a data no padrão brasileiro
+  // Formata a data no padrão brasileiro incluindo o dia da semana capitalizado
   const formatarData = (isoString) => {
     try {
       const data = new Date(isoString);
-      return data.toLocaleDateString("pt-BR", {
+      const str = data.toLocaleDateString("pt-BR", {
+        weekday: "short",
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit"
       }) + "h";
+      // Capitaliza a primeira letra do dia da semana (ex: qui. -> Qui.)
+      return str.charAt(0).toUpperCase() + str.slice(1);
     } catch (e) {
       return isoString;
     }

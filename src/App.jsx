@@ -169,6 +169,48 @@ export default function App() {
     }
   };
 
+  // 2.5. Salvar metadados da apresentação (título do artigo, links e data)
+  const handleSavePresentationMetadata = async (metadata) => {
+    const { id_apresentacao, titulo_artigo, link_artigo, link_slides, data_agendada } = metadata;
+    const oldApresentacoes = apresentacoes;
+
+    // Atualização otimista local
+    setApresentacoes((prev) =>
+      prev.map((ap) =>
+        ap.id_apresentacao === id_apresentacao
+          ? { ...ap, titulo_artigo, link_artigo, link_slides, data_agendada }
+          : ap
+      )
+    );
+    
+    // Atualiza também a apresentação selecionada para refletir mudanças no modal aberto
+    setSelectedPresentation((prev) => 
+      prev && prev.id_apresentacao === id_apresentacao 
+        ? { ...prev, titulo_artigo, link_artigo, link_slides, data_agendada }
+        : prev
+    );
+
+    try {
+      const res = await fetch("/api/update-presentation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(metadata)
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro ao atualizar dados da apresentação");
+      }
+
+      showToast("Detalhes da apresentação atualizados!", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Falha ao atualizar dados. Revertendo...", "error");
+      setApresentacoes(oldApresentacoes);
+      const oldSelected = oldApresentacoes.find(ap => ap.id_apresentacao === id_apresentacao);
+      if (oldSelected) setSelectedPresentation(oldSelected);
+    }
+  };
+
   // 3. Resetar o Banco de Dados para estado inicial
   const handleResetDatabase = async () => {
     if (window.confirm("Deseja redefinir o banco de dados para os dados originais do Clube de Revista? Isso apagará notas criadas.")) {
@@ -308,6 +350,7 @@ export default function App() {
           avaliacaoExistente={getSelectedEvaluation()}
           onClose={() => setSelectedPresentation(null)}
           onSave={handleSaveEvaluation}
+          onSaveMetadata={handleSavePresentationMetadata}
         />
       )}
 

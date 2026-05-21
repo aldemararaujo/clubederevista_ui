@@ -10,7 +10,8 @@ export default function EvaluationModal({
   alunos,
   avaliacaoExistente,
   onClose,
-  onSave
+  onSave,
+  onSaveMetadata
 }) {
   // Estados para o formulário
   const [notaMetodologia, setNotaMetodologia] = useState("");
@@ -18,7 +19,34 @@ export default function EvaluationModal({
   const [feedback, setFeedback] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Popula o formulário com dados existentes (se houver) ao abrir/mudar
+  // Estados para edição dos detalhes da apresentação (artigo/links)
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
+  const [editTitulo, setEditTitulo] = useState(apresentacao.titulo_artigo || "");
+  const [editLinkArtigo, setEditLinkArtigo] = useState(apresentacao.link_artigo || "");
+  const [editLinkSlides, setEditLinkSlides] = useState(apresentacao.link_slides || "");
+  const [editData, setEditData] = useState("");
+
+  // Atualiza os estados locais quando a apresentação muda
+  useEffect(() => {
+    setEditTitulo(apresentacao.titulo_artigo || "");
+    setEditLinkArtigo(apresentacao.link_artigo || "");
+    setEditLinkSlides(apresentacao.link_slides || "");
+    
+    if (apresentacao.data_agendada) {
+      try {
+        const d = new Date(apresentacao.data_agendada);
+        const offset = d.getTimezoneOffset();
+        const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+        setEditData(localDate.toISOString().slice(0, 16));
+      } catch (e) {
+        setEditData("");
+      }
+    } else {
+      setEditData("");
+    }
+  }, [apresentacao]);
+
+  // Popula o formulário com dados de notas existentes (se houver) ao abrir/mudar
   useEffect(() => {
     if (avaliacaoExistente) {
       setNotaMetodologia(avaliacaoExistente.nota_metodologia?.toString() || "");
@@ -30,6 +58,17 @@ export default function EvaluationModal({
       setFeedback("");
     }
   }, [avaliacaoExistente, apresentacao]);
+
+  const handleSaveMeta = () => {
+    onSaveMetadata({
+      id_apresentacao: apresentacao.id_apresentacao,
+      titulo_artigo: editTitulo,
+      link_artigo: editLinkArtigo,
+      link_slides: editLinkSlides,
+      data_agendada: editData ? new Date(editData).toISOString() : apresentacao.data_agendada
+    });
+    setIsEditingMeta(false);
+  };
 
   // Calcula a média em tempo real para auxiliar o professor
   const calcularMedia = () => {
@@ -126,14 +165,99 @@ export default function EvaluationModal({
           <div className="modal-body">
             
             {/* Título do Artigo */}
-            <div style={{ display: "flex", gap: "8px", background: "rgba(255,255,255,0.01)", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
-              <BookOpen size={18} style={{ color: "var(--primary)", flexShrink: 0, marginTop: "2px" }} />
-              <div>
-                <strong style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Artigo Escolhido:</strong>
-                <p style={{ fontSize: "0.85rem", fontStyle: "italic", color: "var(--text-primary)", marginTop: "2px" }}>
-                  {apresentacao.titulo_artigo || "Sem artigo cadastrado"}
-                </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "rgba(255,255,255,0.01)", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <BookOpen size={18} style={{ color: "var(--primary)" }} />
+                  <strong style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Detalhes da Apresentação:</strong>
+                </div>
+                <button
+                  type="button"
+                  style={{ fontSize: "0.75rem", color: "var(--primary)", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: "4px" }}
+                  onClick={() => setIsEditingMeta(!isEditingMeta)}
+                >
+                  {isEditingMeta ? "Cancelar Edição" : "Editar Artigo & Links"}
+                </button>
               </div>
+              
+              {!isEditingMeta ? (
+                <div style={{ marginTop: "4px" }}>
+                  <p style={{ fontSize: "0.85rem", fontStyle: "italic", color: "var(--text-primary)" }}>
+                    {apresentacao.titulo_artigo || "Sem artigo cadastrado"}
+                  </p>
+                  <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "0.8rem" }}>
+                    {apresentacao.link_artigo && (
+                      <a href={apresentacao.link_artigo} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", textDecoration: "underline", display: "inline-flex", alignItems: "center" }}>
+                        Ver Artigo Original
+                      </a>
+                    )}
+                    {apresentacao.link_slides && (
+                      <a href={apresentacao.link_slides} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", textDecoration: "underline", display: "inline-flex", alignItems: "center" }}>
+                        Ver Slides da Apresentação
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "8px", width: "100%" }}>
+                  <div className="input-group" style={{ margin: "0" }}>
+                    <label className="input-label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Título do Artigo</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                      value={editTitulo}
+                      onChange={(e) => setEditTitulo(e.target.value)}
+                      placeholder="Título completo do artigo..."
+                    />
+                  </div>
+                  
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <div className="input-group" style={{ margin: "0" }}>
+                      <label className="input-label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Link do Artigo</label>
+                      <input
+                        type="url"
+                        className="input-field"
+                        style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                        value={editLinkArtigo}
+                        onChange={(e) => setEditLinkArtigo(e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="input-group" style={{ margin: "0" }}>
+                      <label className="input-label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Link dos Slides</label>
+                      <input
+                        type="url"
+                        className="input-field"
+                        style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                        value={editLinkSlides}
+                        onChange={(e) => setEditLinkSlides(e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="input-group" style={{ margin: "0" }}>
+                    <label className="input-label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Data e Hora da Apresentação</label>
+                    <input
+                      type="datetime-local"
+                      className="input-field"
+                      style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                      value={editData}
+                      onChange={(e) => setEditData(e.target.value)}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ alignSelf: "flex-end", padding: "0.4rem 0.8rem", fontSize: "0.8rem", height: "auto" }}
+                    onClick={handleSaveMeta}
+                  >
+                    Salvar Detalhes
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Seção Alunos */}

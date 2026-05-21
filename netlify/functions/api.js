@@ -192,6 +192,30 @@ export async function handler(event, context) {
       };
     }
 
+    // 5. POST /api/update-presentation -> Atualiza os dados de um artigo/apresentação (título, links, data)
+    if (path.endsWith("/update-presentation") && method === "POST") {
+      const { id_apresentacao, titulo_artigo, link_artigo, link_slides, data_agendada } = JSON.parse(event.body || "{}");
+
+      if (!id_apresentacao) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: "O parâmetro id_apresentacao é obrigatório." })
+        };
+      }
+
+      await client.execute({
+        sql: "UPDATE apresentacoes SET titulo_artigo = ?, link_artigo = ?, link_slides = ?, data_agendada = ? WHERE id_apresentacao = ?",
+        args: [titulo_artigo || "", link_artigo || "", link_slides || "", data_agendada || "", id_apresentacao]
+      });
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: "Dados da apresentação atualizados com sucesso." })
+      };
+    }
+
     // 4. POST /api/reset -> Reseta o banco de dados e repopula (útil para testes do professor)
     if (path.endsWith("/reset") && method === "POST") {
       await client.execute("DROP TABLE IF EXISTS avaliacoes");
