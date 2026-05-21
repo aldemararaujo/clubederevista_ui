@@ -1,11 +1,10 @@
-import { createClient } from "@libsql/client";
+import { createClient } from "@libsql/client/web";
 import { schemaQueries, seedGrupos, seedAlunos, seedApresentacoes, seedAvaliacoes } from "./mockData.js";
 
 // Inicializa o cliente do banco de dados Turso.
-// Se TURSO_URL e TURSO_TOKEN não estiverem definidos no ambiente, 
-// ele usará um arquivo SQLite local (clubederevista.db) de forma transparente.
+// Usamos o cliente web puro que é compatível com ambientes serverless (Netlify Functions/esbuild).
 const client = createClient({
-  url: process.env.TURSO_URL || "file:clubederevista.db",
+  url: process.env.TURSO_URL || "https://placeholder-db.turso.io",
   authToken: process.env.TURSO_TOKEN || "",
 });
 
