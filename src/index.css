@@ -671,6 +671,14 @@ body {
   transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -722,6 +730,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-section-title {
