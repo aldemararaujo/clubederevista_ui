@@ -328,12 +328,21 @@ export default function App() {
       </div>
 
       {/* Rodapé da Aplicação */}
-      <footer className="app-footer">
-        <p>
-          Desenvolvido para o Departamento de Medicina da <strong>UNCISAL</strong> &bull; Clube de Revista &copy; {new Date().getFullYear()}
+      <footer className="app-footer" style={{ display: "flex", flexDirection: "column", gap: "6px", lineHeight: "1.6" }}>
+        <p style={{ fontWeight: "600", color: "var(--text-primary)" }}>
+          2026 @ Aldemar Araujo Castro
+        </p>
+        <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "500" }}>
+          Disciplina de Pesquisa em Ciências da Saúde
+        </p>
+        <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+          Universidade Estadual de Ciências da Saúde de Alagoas - UNCISAL
+        </p>
+        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          Maceió - Alagoas - Brasil
         </p>
         {isOfflineMode && (
-          <p style={{ color: "var(--warning)", marginTop: "4px", fontSize: "0.7rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+          <p style={{ color: "var(--warning)", marginTop: "8px", fontSize: "0.7rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
             <AlertTriangle size={12} />
             <span>Nota: Para habilitar a persistência em nuvem, configure as variáveis de ambiente TURSO_URL e TURSO_TOKEN e inicie com 'netlify dev'</span>
           </p>
