@@ -15,7 +15,9 @@ import {
   AlertTriangle, 
   CheckCircle, 
   Info, 
-  Sparkles 
+  Sparkles,
+  Sun,
+  Moon
 } from "lucide-react";
 
 export default function App() {
@@ -24,6 +26,16 @@ export default function App() {
   const [alunos, setAlunos] = useState([]);
   const [apresentacoes, setApresentacoes] = useState([]);
   const [avaliacoes, setAvaliacoes] = useState([]);
+
+  // Tema claro/escuro (padrão é claro)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
   
   // Estados de controle de fluxo e UI
   const [isLoading, setIsLoading] = useState(true);
@@ -264,6 +276,15 @@ export default function App() {
             {isOfflineMode ? <Database size={14} /> : <DatabaseZap size={14} />}
             <span>{isOfflineMode ? "Modo Simulado (Offline)" : "Turso Conectado"}</span>
           </div>
+
+          {/* Botão de Alternar Tema */}
+          <button
+            className="btn-icon"
+            onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+            title={theme === "light" ? "Mudar para Modo Escuro" : "Mudar para Modo Claro"}
+          >
+            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
 
           <button 
             className="btn-secondary" 

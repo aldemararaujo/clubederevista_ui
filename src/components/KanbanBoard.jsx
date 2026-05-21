@@ -14,6 +14,9 @@ export default function KanbanBoard({
 }) {
   // Estado para controlar qual coluna está recebendo um card arrastado
   const [colunaArrastada, setColunaArrastada] = useState(null);
+  
+  // Estado para controlar a aba ativa no layout responsivo móvel
+  const [activeTab, setActiveTab] = useState("Parado");
 
   const colunas = [
     {
@@ -64,22 +67,41 @@ export default function KanbanBoard({
   };
 
   return (
-    <div className="kanban-grid">
-      {colunas.map((coluna) => {
-        // Filtra apresentações pertencentes a esta coluna
-        const apresentacoesFiltradas = apresentacoes.filter(
-          (ap) => ap.status_atividade === coluna.id
-        );
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem", width: "100%" }}>
+      {/* Barra de Abas Mobile */}
+      <div className="mobile-tabs-container">
+        {colunas.map((coluna) => {
+          const count = apresentacoes.filter((ap) => ap.status_atividade === coluna.id).length;
+          return (
+            <button
+              key={coluna.id}
+              className={`mobile-tab-btn ${activeTab === coluna.id ? "active" : ""}`}
+              onClick={() => setActiveTab(coluna.id)}
+            >
+              {coluna.icone}
+              <span>{coluna.titulo}</span>
+              <span className="mobile-tab-badge">{count}</span>
+            </button>
+          );
+        })}
+      </div>
 
-        return (
-          <div
-            key={coluna.id}
-            className="kanban-column"
-            onDragOver={(e) => handleDragOver(e, coluna.id)}
-            onDragEnter={(e) => handleDragEnter(e, coluna.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, coluna.id)}
-          >
+      <div className="kanban-grid">
+        {colunas.map((coluna) => {
+          // Filtra apresentações pertencentes a esta coluna
+          const apresentacoesFiltradas = apresentacoes.filter(
+            (ap) => ap.status_atividade === coluna.id
+          );
+
+          return (
+            <div
+              key={coluna.id}
+              className={`kanban-column ${activeTab === coluna.id ? "active-column" : ""}`}
+              onDragOver={(e) => handleDragOver(e, coluna.id)}
+              onDragEnter={(e) => handleDragEnter(e, coluna.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, coluna.id)}
+            >
             <div className="kanban-column-header">
               <div className="column-title-wrapper">
                 <span className={`column-indicator ${coluna.cor}`}></span>
@@ -120,6 +142,7 @@ export default function KanbanBoard({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
