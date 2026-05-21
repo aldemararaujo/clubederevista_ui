@@ -3,7 +3,6 @@ import KanbanBoard from "./components/KanbanBoard";
 import EvaluationModal from "./components/EvaluationModal";
 import { 
   HeartPulse, 
-  RotateCcw, 
   DatabaseZap, 
   AlertTriangle, 
   CheckCircle, 
@@ -211,23 +210,6 @@ export default function App() {
     }
   };
 
-  // 3. Resetar o Banco de Dados para estado inicial
-  const handleResetDatabase = async () => {
-    if (window.confirm("Deseja redefinir o banco de dados para os dados originais do Clube de Revista? Isso apagará notas criadas.")) {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/reset", { method: "POST" });
-        if (!res.ok) throw new Error("Erro ao resetar");
-        showToast("Banco de dados reinicializado com sucesso!", "success");
-        carregarDados();
-      } catch (err) {
-        console.error(err);
-        showToast("Falha ao resetar banco remoto.", "error");
-        setIsLoading(false);
-      }
-    }
-  };
-
   // Abre modal de avaliação para a apresentação clicada
   const handleOpenEvaluation = (apresentacao) => {
     setSelectedPresentation(apresentacao);
@@ -292,14 +274,7 @@ export default function App() {
             {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
-          <button 
-            className="btn-secondary" 
-            onClick={handleResetDatabase}
-            title="Repopula e redefine os dados do banco para os originais"
-          >
-            <RotateCcw size={16} />
-            <span>Resetar Dados</span>
-          </button>
+
         </div>
       </header>
 
