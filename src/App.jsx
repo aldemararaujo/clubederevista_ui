@@ -2,15 +2,8 @@ import React, { useState, useEffect } from "react";
 import KanbanBoard from "./components/KanbanBoard";
 import EvaluationModal from "./components/EvaluationModal";
 import { 
-  mockGrupos, 
-  mockAlunos, 
-  mockApresentacoes, 
-  mockAvaliacoes 
-} from "./dbMockData";
-import { 
   HeartPulse, 
   RotateCcw, 
-  Database, 
   DatabaseZap, 
   AlertTriangle, 
   CheckCircle, 
@@ -37,13 +30,11 @@ export default function App() {
     localStorage.setItem("theme", theme);
   }, [theme]);
   
-  // Estados de controle de fluxo e UI
+  // Estados de controle de fluxo, erro e UI
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedPresentation, setSelectedPresentation] = useState(null);
   const [toasts, setToasts] = useState([]);
-  
-  // Modo de operação (online com Turso vs fallback mock em memória)
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // Inicialização e busca dos dados
   useEffect(() => {
@@ -63,6 +54,7 @@ export default function App() {
 
   const carregarDados = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       // Tenta carregar do backend (Netlify Functions)
       const res = await fetch("/api/data");
@@ -78,19 +70,11 @@ export default function App() {
       setAlunos(data.alunos || []);
       setApresentacoes(data.apresentacoes || []);
       setAvaliacoes(data.avaliacoes || []);
-      setIsOfflineMode(false);
-      showToast("Conectado ao banco Turso com sucesso!", "success");
+      showToast("Dados carregados com sucesso!", "success");
     } catch (err) {
-      console.warn("Backend não encontrado ou falhou. Ativando modo de simulação local (offline):", err.message);
-      
-      // Fallback: carrega os dados de simulação locais em memória
-      setGrupos(mockGrupos);
-      setAlunos(mockAlunos);
-      setApresentacoes(mockApresentacoes);
-      setAvaliacoes(mockAvaliacoes);
-      setIsOfflineMode(true);
-      
-      showToast("Executando em modo de simulação (Offline). Dados salvos apenas em memória.", "warning");
+      console.error("Erro ao conectar com o banco de dados:", err.message);
+      setError(err.message);
+      showToast("Falha na conexão com o banco de dados.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +82,7 @@ export default function App() {
 
   // 1. Atualizar o status de uma apresentação
   const handleUpdateStatus = async (id_apresentacao, novoStatus) => {
+    const oldApresentacoes = apresentacoes;
     // Atualização otimista no estado local (interface atualiza instantaneamente!)
     setApresentacoes((prev) =>
       prev.map((ap) =>
@@ -106,11 +91,6 @@ export default function App() {
           : ap
       )
     );
-
-    if (isOfflineMode) {
-      showToast(`Status movido para '${novoStatus}' (Modo Simulação)`, "info");
-      return;
-    }
 
     try {
       const res = await fetch("/api/update-status", {
@@ -127,18 +107,17 @@ export default function App() {
     } catch (err) {
       console.error(err);
       showToast("Falha ao salvar status no banco de dados. Revertendo...", "error");
-      
-      // Reverte em caso de falha de conexão
-      carregarDados();
+      setApresentacoes(oldApresentacoes);
     }
   };
 
   // 2. Salvar uma avaliação
   const handleSaveEvaluation = async (evaluationData) => {
     const { id_apresentacao, nota_metodologia, nota_exposicao, feedback } = evaluationData;
+    const oldAvaliacoes = avaliacoes;
+    const oldApresentacoes = apresentacoes;
 
     // Atualização otimista no estado local
-    // Insere ou atualiza no array local de avaliações
     setAvaliacoes((prev) => {
       const idx = prev.findIndex((av) => av.id_apresentacao === id_apresentacao);
       const novaAvaliacao = {
@@ -169,11 +148,6 @@ export default function App() {
 
     setSelectedPresentation(null); // Fecha o modal
 
-    if (isOfflineMode) {
-      showToast("Avaliação registrada localmente!", "success");
-      return;
-    }
-
     try {
       const res = await fetch("/api/save-evaluation", {
         method: "POST",
@@ -185,34 +159,24 @@ export default function App() {
         throw new Error("Erro ao salvar avaliação");
       }
 
-      showToast("Avaliação salva no banco Turso!", "success");
-      // Recarrega dados reais para manter integridade
+      showToast("Avaliação registrada no banco!", "success");
       carregarDados();
     } catch (err) {
       console.error(err);
-      showToast("Falha ao enviar avaliação para a nuvem. Revertendo...", "error");
-      carregarDados();
+      showToast("Falha ao salvar avaliação. Revertendo...", "error");
+      setAvaliacoes(oldAvaliacoes);
+      setApresentacoes(oldApresentacoes);
     }
   };
 
-  // 3. Resetar o Banco de Dados para estado inicial (ação do professor)
+  // 3. Resetar o Banco de Dados para estado inicial
   const handleResetDatabase = async () => {
     if (window.confirm("Deseja redefinir o banco de dados para os dados originais do Clube de Revista? Isso apagará notas criadas.")) {
       setIsLoading(true);
-      if (isOfflineMode) {
-        setGrupos(mockGrupos);
-        setAlunos(mockAlunos);
-        setApresentacoes(mockApresentacoes);
-        setAvaliacoes(mockAvaliacoes);
-        setIsLoading(false);
-        showToast("Dados simulados reiniciados com sucesso!", "success");
-        return;
-      }
-
       try {
         const res = await fetch("/api/reset", { method: "POST" });
         if (!res.ok) throw new Error("Erro ao resetar");
-        showToast("Banco de dados Turso reiniciado com sucesso!", "success");
+        showToast("Banco de dados reinicializado com sucesso!", "success");
         carregarDados();
       } catch (err) {
         console.error(err);
@@ -267,14 +231,14 @@ export default function App() {
               borderRadius: "20px",
               fontSize: "0.8rem",
               fontWeight: "600",
-              background: isOfflineMode ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)",
-              color: isOfflineMode ? "var(--warning)" : "var(--success)",
-              border: `1px solid ${isOfflineMode ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)"}`
+              background: "rgba(16, 185, 129, 0.1)",
+              color: "var(--success)",
+              border: "1px solid rgba(16, 185, 129, 0.2)"
             }}
-            title={isOfflineMode ? "Rodando em modo local, operações salvas em memória" : "Conectado ao banco de dados Turso na nuvem"}
+            title="Conectado ao banco de dados"
           >
-            {isOfflineMode ? <Database size={14} /> : <DatabaseZap size={14} />}
-            <span>{isOfflineMode ? "Modo Simulado (Offline)" : "Turso Conectado"}</span>
+            <DatabaseZap size={14} />
+            <span>Banco Conectado</span>
           </div>
 
           {/* Botão de Alternar Tema */}
@@ -307,11 +271,23 @@ export default function App() {
         </div>
       </div>
 
-      {/* Conteúdo Principal (Quadro Kanban ou Carregamento) */}
+      {/* Conteúdo Principal (Quadro Kanban, Carregamento ou Erro) */}
       {isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "300px", gap: "12px" }}>
           <div style={{ width: "40px", height: "40px", border: "3px solid rgba(0, 210, 255, 0.1)", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "fadeIn 0.6s infinite linear" }} className="spinner"></div>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Acessando banco de dados...</p>
+        </div>
+      ) : error ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "300px", gap: "16px", background: "rgba(239, 68, 68, 0.05)", border: "1px dashed #ef4444", borderRadius: "12px", padding: "2rem", textAlign: "center" }}>
+          <AlertTriangle size={40} style={{ color: "#ef4444" }} />
+          <h3 style={{ color: "var(--text-primary)", fontWeight: "700" }}>Falha de Conexão</h3>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", maxWidth: "450px" }}>
+            Não foi possível carregar os dados do servidor real. Certifique-se de que o backend local está rodando (`netlify dev`) ou que o deploy no Netlify está ativo e configurado.
+          </p>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Detalhe: {error}</p>
+          <button className="btn-primary" onClick={carregarDados}>
+            Tentar Novamente
+          </button>
         </div>
       ) : (
         <KanbanBoard
@@ -362,12 +338,6 @@ export default function App() {
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
           Maceió - Alagoas - Brasil
         </p>
-        {isOfflineMode && (
-          <p style={{ color: "var(--warning)", marginTop: "8px", fontSize: "0.7rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-            <AlertTriangle size={12} />
-            <span>Nota: Para habilitar a persistência em nuvem, configure as variáveis de ambiente TURSO_URL e TURSO_TOKEN e inicie com 'netlify dev'</span>
-          </p>
-        )}
       </footer>
 
     </div>
