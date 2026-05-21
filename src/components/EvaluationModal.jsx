@@ -26,11 +26,19 @@ export default function EvaluationModal({
   const [editLinkSlides, setEditLinkSlides] = useState(apresentacao.link_slides || "");
   const [editData, setEditData] = useState("");
 
-  // Atualiza os estados locais quando a apresentação muda
+  // Estados adicionais para edição de grupo e alunos
+  const [editGrupoNome, setEditGrupoNome] = useState(grupo?.nome || "");
+  const [editGrupoTema, setEditGrupoTema] = useState(grupo?.tema_foco || "");
+  const [editAlunos, setEditAlunos] = useState(alunos || []);
+
+  // Atualiza os estados locais quando a apresentação, grupo ou alunos mudam
   useEffect(() => {
     setEditTitulo(apresentacao.titulo_artigo || "");
     setEditLinkArtigo(apresentacao.link_artigo || "");
     setEditLinkSlides(apresentacao.link_slides || "");
+    setEditGrupoNome(grupo?.nome || "");
+    setEditGrupoTema(grupo?.tema_foco || "");
+    setEditAlunos(alunos || []);
     
     if (apresentacao.data_agendada) {
       try {
@@ -44,7 +52,13 @@ export default function EvaluationModal({
     } else {
       setEditData("");
     }
-  }, [apresentacao]);
+  }, [apresentacao, grupo, alunos]);
+
+  const handleStudentNameChange = (id_aluno, novoNome) => {
+    setEditAlunos((prev) =>
+      prev.map((al) => (al.id_aluno === id_aluno ? { ...al, nome: novoNome } : al))
+    );
+  };
 
   // Popula o formulário com dados de notas existentes (se houver) ao abrir/mudar
   useEffect(() => {
@@ -65,7 +79,13 @@ export default function EvaluationModal({
       titulo_artigo: editTitulo,
       link_artigo: editLinkArtigo,
       link_slides: editLinkSlides,
-      data_agendada: editData ? new Date(editData).toISOString() : apresentacao.data_agendada
+      data_agendada: editData ? new Date(editData).toISOString() : apresentacao.data_agendada,
+      grupo: {
+        id_grupo: grupo?.id_grupo,
+        nome: editGrupoNome,
+        tema_foco: editGrupoTema
+      },
+      alunos: editAlunos
     });
     setIsEditingMeta(false);
   };
@@ -176,7 +196,7 @@ export default function EvaluationModal({
                   style={{ fontSize: "0.75rem", color: "var(--primary)", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: "4px" }}
                   onClick={() => setIsEditingMeta(!isEditingMeta)}
                 >
-                  {isEditingMeta ? "Cancelar Edição" : "Editar Artigo & Links"}
+                  {isEditingMeta ? "Cancelar Edição" : "Editar Detalhes/Membros"}
                 </button>
               </div>
               
@@ -248,6 +268,48 @@ export default function EvaluationModal({
                     />
                   </div>
 
+                  {/* Seção de Edição do Grupo e Alunos */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", borderTop: "1px dashed var(--border-color)", paddingTop: "8px" }}>
+                    <div className="input-group" style={{ margin: "0" }}>
+                      <label className="input-label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Nome do Grupo</label>
+                      <input
+                        type="text"
+                        className="input-field"
+                        style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                        value={editGrupoNome}
+                        onChange={(e) => setEditGrupoNome(e.target.value)}
+                        placeholder="Nome do grupo..."
+                      />
+                    </div>
+                    <div className="input-group" style={{ margin: "0" }}>
+                      <label className="input-label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Tema de Foco</label>
+                      <input
+                        type="text"
+                        className="input-field"
+                        style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                        value={editGrupoTema}
+                        onChange={(e) => setEditGrupoTema(e.target.value)}
+                        placeholder="Tema científico..."
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px dashed var(--border-color)", paddingTop: "8px" }}>
+                    <label className="input-label" style={{ fontSize: "0.75rem", fontWeight: "bold" }}>Membros do Grupo (Nomes)</label>
+                    {editAlunos.map((al, idx) => (
+                      <div key={al.id_aluno} className="input-group" style={{ margin: "0" }}>
+                        <input
+                          type="text"
+                          className="input-field"
+                          style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                          value={al.nome}
+                          onChange={(e) => handleStudentNameChange(al.id_aluno, e.target.value)}
+                          placeholder={`Nome do Aluno ${idx + 1}...`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
                   <button
                     type="button"
                     className="btn-primary"
@@ -275,7 +337,6 @@ export default function EvaluationModal({
                       </div>
                       <div className="student-info">
                         <span className="student-name">{aluno.nome}</span>
-                        <span className="student-email">{aluno.email}</span>
                       </div>
                     </div>
                   ))

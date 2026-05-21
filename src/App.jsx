@@ -168,10 +168,12 @@ export default function App() {
     }
   };
 
-  // 2.5. Salvar metadados da apresentação (título do artigo, links e data)
+  // 2.5. Salvar metadados da apresentação, grupo e alunos
   const handleSavePresentationMetadata = async (metadata) => {
-    const { id_apresentacao, titulo_artigo, link_artigo, link_slides, data_agendada } = metadata;
+    const { id_apresentacao, titulo_artigo, link_artigo, link_slides, data_agendada, grupo, alunos: updatedAlunos } = metadata;
     const oldApresentacoes = apresentacoes;
+    const oldGrupos = grupos;
+    const oldAlunos = alunos;
 
     // Atualização otimista local
     setApresentacoes((prev) =>
@@ -181,6 +183,21 @@ export default function App() {
           : ap
       )
     );
+
+    if (grupo) {
+      setGrupos((prev) =>
+        prev.map((g) => (g.id_grupo === grupo.id_grupo ? { ...g, nome: grupo.nome, tema_foco: grupo.tema_foco } : g))
+      );
+    }
+
+    if (updatedAlunos) {
+      setAlunos((prev) =>
+        prev.map((al) => {
+          const matching = updatedAlunos.find((ua) => ua.id_aluno === al.id_aluno);
+          return matching ? { ...al, nome: matching.nome } : al;
+        })
+      );
+    }
     
     // Atualiza também a apresentação selecionada para refletir mudanças no modal aberto
     setSelectedPresentation((prev) => 
@@ -190,21 +207,52 @@ export default function App() {
     );
 
     try {
-      const res = await fetch("/api/update-presentation", {
+      // 1. Salvar dados da apresentação
+      let res = await fetch("/api/update-presentation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(metadata)
+        body: JSON.stringify({ id_apresentacao, titulo_artigo, link_artigo, link_slides, data_agendada })
       });
 
       if (!res.ok) {
         throw new Error("Erro ao atualizar dados da apresentação");
       }
 
-      showToast("Detalhes da apresentação atualizados!", "success");
+      // 2. Salvar dados do grupo se fornecido
+      if (grupo) {
+        res = await fetch("/api/update-group", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(grupo)
+        });
+        if (!res.ok) {
+          throw new Error("Erro ao atualizar dados do grupo");
+        }
+      }
+
+      // 3. Salvar dados dos alunos se fornecido
+      if (updatedAlunos) {
+        for (const aluno of updatedAlunos) {
+          res = await fetch("/api/update-student", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_aluno: aluno.id_aluno, nome: aluno.nome })
+          });
+          if (!res.ok) {
+            throw new Error(`Erro ao atualizar dados do aluno ${aluno.nome}`);
+          }
+        }
+      }
+
+      showToast("Detalhes salvos com sucesso no banco de dados!", "success");
+      // Recarrega todos os dados para sincronia perfeita
+      carregarDados();
     } catch (err) {
       console.error(err);
-      showToast("Falha ao atualizar dados. Revertendo...", "error");
+      showToast("Falha ao salvar alterações. Revertendo...", "error");
       setApresentacoes(oldApresentacoes);
+      setGrupos(oldGrupos);
+      setAlunos(oldAlunos);
       const oldSelected = oldApresentacoes.find(ap => ap.id_apresentacao === id_apresentacao);
       if (oldSelected) setSelectedPresentation(oldSelected);
     }

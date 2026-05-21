@@ -36,8 +36,8 @@ async function ensureDatabaseInitialized() {
       
       seedAlunos.forEach(a => {
         seedOps.push({
-          sql: "INSERT INTO alunos (id_aluno, nome, email, id_grupo) VALUES (?, ?, ?, ?)",
-          args: [a.id, a.nome, a.email, a.grupo]
+          sql: "INSERT INTO alunos (id_aluno, nome, id_grupo) VALUES (?, ?, ?)",
+          args: [a.id, a.nome, a.grupo]
         });
       });
       
@@ -213,6 +213,54 @@ export async function handler(event, context) {
         statusCode: 200,
         headers,
         body: JSON.stringify({ message: "Dados da apresentação atualizados com sucesso." })
+      };
+    }
+
+    // 6. POST /api/update-group -> Atualiza nome e tema de um grupo
+    if (path.endsWith("/update-group") && method === "POST") {
+      const { id_grupo, nome, tema_foco } = JSON.parse(event.body || "{}");
+
+      if (!id_grupo) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: "O parâmetro id_grupo é obrigatório." })
+        };
+      }
+
+      await client.execute({
+        sql: "UPDATE grupos SET nome = ?, tema_foco = ? WHERE id_grupo = ?",
+        args: [nome || "", tema_foco || "", id_grupo]
+      });
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: "Grupo atualizado com sucesso." })
+      };
+    }
+
+    // 7. POST /api/update-student -> Atualiza nome de um aluno
+    if (path.endsWith("/update-student") && method === "POST") {
+      const { id_aluno, nome } = JSON.parse(event.body || "{}");
+
+      if (!id_aluno) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: "O parâmetro id_aluno é obrigatório." })
+        };
+      }
+
+      await client.execute({
+        sql: "UPDATE alunos SET nome = ? WHERE id_aluno = ?",
+        args: [nome || "", id_aluno]
+      });
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: "Aluno atualizado com sucesso." })
       };
     }
 
